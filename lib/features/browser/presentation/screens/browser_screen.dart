@@ -23,21 +23,61 @@ class _BrowserScreenState extends ConsumerState<BrowserScreen> {
   bool _canGoForward = false;
   String _currentUrl = 'https://www.google.com';
   String _currentTitle = 'Google';
+  bool _hasInitialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    // Create initial tab
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _createInitialTab();
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Get URL from route arguments if provided
+    if (!_hasInitialized) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args != null && args is String) {
+        _currentUrl = args;
+        _currentTitle = _getTitleFromUrl(args);
+      }
+      _hasInitialized = true;
+
+      // Create initial tab after getting arguments
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _createInitialTab();
+      });
+    }
+  }
+
+  String _getTitleFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      return uri.host.replaceAll('www.', '');
+    } catch (e) {
+      return 'New Tab';
+    }
   }
 
   void _createInitialTab() {
     final browserNotifier = ref.read(browserProvider.notifier);
-    if (ref.read(browserProvider).tabs.isEmpty) {
-      final initialTab = BrowserTab(id: DateTime.now().millisecondsSinceEpoch.toString(), url: _currentUrl, title: _currentTitle, createdAt: DateTime.now(), lastAccessedAt: DateTime.now(), isActive: true);
+    final browserState = ref.read(browserProvider);
+
+    if (browserState.tabs.isEmpty) {
+      // Only create a new tab if none exist
+      final initialTab = BrowserTab(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        url: _currentUrl,
+        title: _currentTitle,
+        createdAt: DateTime.now(),
+        lastAccessedAt: DateTime.now(),
+        isActive: true,
+      );
       browserNotifier.addTab(initialTab);
+    } else {
+      // Use the active tab's URL
+      final activeTab = browserState.activeTab;
+      if (activeTab != null) {
+        setState(() {
+          _currentUrl = activeTab.url;
+          _currentTitle = activeTab.title;
+        });
+      }
     }
   }
 
@@ -80,18 +120,31 @@ class _BrowserScreenState extends ConsumerState<BrowserScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_currentTitle.isEmpty ? AppStrings.appName : _currentTitle, overflow: TextOverflow.ellipsis),
+        title: Text(
+          _currentTitle.isEmpty ? AppStrings.appName : _currentTitle,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              final newTab = BrowserTab(id: DateTime.now().millisecondsSinceEpoch.toString(), url: 'https://www.google.com', title: 'New Tab', createdAt: DateTime.now(), lastAccessedAt: DateTime.now(), isActive: true);
+              final newTab = BrowserTab(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                url: 'https://www.google.com',
+                title: 'New Tab',
+                createdAt: DateTime.now(),
+                lastAccessedAt: DateTime.now(),
+                isActive: true,
+              );
               ref.read(browserProvider.notifier).addTab(newTab);
             },
             tooltip: 'New Tab',
           ),
           IconButton(
-            icon: Badge(label: Text('${browserState.tabCount}'), child: const Icon(Icons.tab)),
+            icon: Badge(
+              label: Text('${browserState.tabCount}'),
+              child: const Icon(Icons.tab),
+            ),
             onPressed: () {
               // Navigate to tab manager (index 2 in bottom navigation)
               // This will be handled by the main scaffold
@@ -102,11 +155,24 @@ class _BrowserScreenState extends ConsumerState<BrowserScreen> {
       ),
       body: Column(
         children: [
-          BrowserUrlBar(initialUrl: _currentUrl, onSubmitted: _loadUrl, onRefresh: _refresh, isLoading: browserState.isLoading),
-          if (browserState.progress > 0 && browserState.progress < 1) LinearProgressIndicator(value: browserState.progress, minHeight: 2),
-          BrowserNavigationControls(onBack: _goBack, onForward: _goForward, onRefresh: _refresh, canGoBack: _canGoBack, canGoForward: _canGoForward),
+          BrowserUrlBar(
+            initialUrl: _currentUrl,
+            onSubmitted: _loadUrl,
+            onRefresh: _refresh,
+            isLoading: browserState.isLoading,
+          ),
+          if (browserState.progress > 0 && browserState.progress < 1)
+            LinearProgressIndicator(value: browserState.progress, minHeight: 2),
+          BrowserNavigationControls(
+            onBack: _goBack,
+            onForward: _goForward,
+            onRefresh: _refresh,
+            canGoBack: _canGoBack,
+            canGoForward: _canGoForward,
+          ),
           Expanded(
             child: WebViewWidget(
+              key: ValueKey(activeTab.id),
               initialUrl: activeTab.url,
               onWebViewCreated: (controller) {
                 _webViewController = controller;
@@ -128,7 +194,9 @@ class _BrowserScreenState extends ConsumerState<BrowserScreen> {
                   _currentTitle = title;
                 });
 
-                ref.read(browserProvider.notifier).updateTabUrl(activeTab.id, currentUrl, title);
+                ref
+                    .read(browserProvider.notifier)
+                    .updateTabUrl(activeTab.id, currentUrl, title);
 
                 await _updateNavigationState();
               },
@@ -149,10 +217,13 @@ class _BrowserScreenState extends ConsumerState<BrowserScreen> {
                 final downloadNotifier = ref.read(downloadProvider.notifier);
                 final messenger = ScaffoldMessenger.of(context);
 
-                final fileName = downloadRequest.suggestedFilename ?? 'download';
+                final fileName =
+                    downloadRequest.suggestedFilename ?? 'download';
                 downloadNotifier.startDownload(fileName);
 
-                messenger.showSnackBar(SnackBar(content: Text('Downloading $fileName...')));
+                messenger.showSnackBar(
+                  SnackBar(content: Text('Downloading $fileName...')),
+                );
 
                 final document = await downloadService.downloadFile(
                   downloadRequest,
@@ -164,10 +235,14 @@ class _BrowserScreenState extends ConsumerState<BrowserScreen> {
 
                 if (document != null) {
                   downloadNotifier.completeDownload();
-                  messenger.showSnackBar(SnackBar(content: Text('Downloaded: ${document.name}')));
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Downloaded: ${document.name}')),
+                  );
                 } else {
                   downloadNotifier.setError('Download failed');
-                  messenger.showSnackBar(const SnackBar(content: Text('Download failed')));
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('Download failed')),
+                  );
                 }
               },
             ),

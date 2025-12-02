@@ -1,11 +1,13 @@
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import '../../../../core/utils/logger.dart';
 
 /// JavaScript Bridge for WebView interactions
 class JavaScriptBridge {
   /// Extract all text content from the current page
   static Future<String?> extractPageText(InAppWebViewController controller) async {
     try {
-      final result = await controller.evaluateJavascript(source: '''
+      final result = await controller.evaluateJavascript(
+        source: '''
         (function() {
           // Remove script and style elements
           var scripts = document.querySelectorAll('script, style, noscript');
@@ -19,11 +21,12 @@ class JavaScriptBridge {
           
           return text;
         })();
-      ''');
-      
+      ''',
+      );
+
       return result?.toString();
     } catch (e) {
-      print('Error extracting page text: $e');
+      Logger.error('Error extracting page text', tag: 'JavaScriptBridge', error: e);
       return null;
     }
   }
@@ -31,7 +34,8 @@ class JavaScriptBridge {
   /// Extract main content from the page (article, main, or body)
   static Future<String?> extractMainContent(InAppWebViewController controller) async {
     try {
-      final result = await controller.evaluateJavascript(source: '''
+      final result = await controller.evaluateJavascript(
+        source: '''
         (function() {
           // Try to find main content area
           var mainContent = document.querySelector('article') || 
@@ -51,11 +55,12 @@ class JavaScriptBridge {
           
           return text;
         })();
-      ''');
-      
+      ''',
+      );
+
       return result?.toString();
     } catch (e) {
-      print('Error extracting main content: $e');
+      Logger.error('Error extracting main content', tag: 'JavaScriptBridge', error: e);
       return null;
     }
   }
@@ -63,7 +68,8 @@ class JavaScriptBridge {
   /// Get page metadata (title, description, keywords)
   static Future<Map<String, String>> getPageMetadata(InAppWebViewController controller) async {
     try {
-      final result = await controller.evaluateJavascript(source: '''
+      final result = await controller.evaluateJavascript(
+        source: '''
         (function() {
           var title = document.title || '';
           var description = '';
@@ -85,19 +91,16 @@ class JavaScriptBridge {
             keywords: keywords
           };
         })();
-      ''');
-      
+      ''',
+      );
+
       if (result is Map) {
-        return {
-          'title': result['title']?.toString() ?? '',
-          'description': result['description']?.toString() ?? '',
-          'keywords': result['keywords']?.toString() ?? '',
-        };
+        return {'title': result['title']?.toString() ?? '', 'description': result['description']?.toString() ?? '', 'keywords': result['keywords']?.toString() ?? ''};
       }
-      
+
       return {};
     } catch (e) {
-      print('Error getting page metadata: $e');
+      Logger.error('Error getting page metadata', tag: 'JavaScriptBridge', error: e);
       return {};
     }
   }
@@ -105,7 +108,9 @@ class JavaScriptBridge {
   /// Highlight text on the page
   static Future<void> highlightText(InAppWebViewController controller, String searchText) async {
     try {
-      await controller.evaluateJavascript(source: '''
+      await controller.evaluateJavascript(
+        source:
+            '''
         (function() {
           var searchText = "$searchText";
           var regex = new RegExp(searchText, 'gi');
@@ -127,16 +132,18 @@ class JavaScriptBridge {
           
           highlightNode(document.body);
         })();
-      ''');
+      ''',
+      );
     } catch (e) {
-      print('Error highlighting text: $e');
+      Logger.error('Error highlighting text', tag: 'JavaScriptBridge', error: e);
     }
   }
 
   /// Remove all highlights from the page
   static Future<void> removeHighlights(InAppWebViewController controller) async {
     try {
-      await controller.evaluateJavascript(source: '''
+      await controller.evaluateJavascript(
+        source: '''
         (function() {
           var marks = document.querySelectorAll('mark');
           marks.forEach(function(mark) {
@@ -145,10 +152,10 @@ class JavaScriptBridge {
             parent.normalize();
           });
         })();
-      ''');
+      ''',
+      );
     } catch (e) {
-      print('Error removing highlights: $e');
+      Logger.error('Error removing highlights', tag: 'JavaScriptBridge', error: e);
     }
   }
 }
-

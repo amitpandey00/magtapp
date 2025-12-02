@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import '../constants/api_constants.dart';
+import 'package:magtapp/core/config/api_config.dart';
 
 /// Dio HTTP Client Configuration
 class DioClient {
@@ -8,8 +8,8 @@ class DioClient {
   DioClient() {
     _dio = Dio(
       BaseOptions(
-        connectTimeout: ApiConstants.connectionTimeout,
-        receiveTimeout: ApiConstants.receiveTimeout,
+        connectTimeout: ApiConfig.connectionTimeout,
+        receiveTimeout: ApiConfig.receiveTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

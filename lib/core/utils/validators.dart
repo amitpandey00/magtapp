@@ -3,7 +3,7 @@ class Validators {
   /// Validate URL
   static bool isValidUrl(String url) {
     if (url.isEmpty) return false;
-    
+
     // Add protocol if missing
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://$url';
@@ -12,18 +12,18 @@ class Validators {
     final urlPattern = RegExp(
       r'^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$',
     );
-    
+
     return urlPattern.hasMatch(url);
   }
 
   /// Format URL with protocol
   static String formatUrl(String url) {
     if (url.isEmpty) return url;
-    
+
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return 'https://$url';
     }
-    
+
     return url;
   }
 
@@ -41,7 +41,7 @@ class Validators {
   /// Validate file name
   static bool isValidFileName(String fileName) {
     if (fileName.isEmpty) return false;
-    
+
     // Check for invalid characters
     final invalidChars = RegExp(r'[<>:"/\\|?*]');
     return !invalidChars.hasMatch(fileName);

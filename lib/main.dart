@@ -8,6 +8,7 @@ import 'features/settings/presentation/providers/settings_provider.dart';
 import 'features/language/presentation/screens/language_selection_screen.dart';
 import 'features/documents/presentation/screens/documents_screen.dart';
 import 'features/translator/presentation/screens/translation_screen.dart';
+import 'features/browser/presentation/screens/browser_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,7 @@ class MagTappApp extends ConsumerWidget {
         '/language-selection': (context) => const LanguageSelectionScreen(),
         '/documents': (context) => const DocumentsScreen(),
         '/translation': (context) => const TranslationScreen(),
+        '/browser': (context) => const BrowserScreen(),
         '/smart-dictionary': (context) => const Scaffold(body: Center(child: Text('Smart Dictionary - Coming Soon'))),
         '/books': (context) => const Scaffold(body: Center(child: Text('Books - Coming Soon'))),
         '/quiz': (context) => const Scaffold(body: Center(child: Text('Quiz - Coming Soon'))),

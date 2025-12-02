@@ -72,7 +72,7 @@ class BrowserNotifier extends StateNotifier<BrowserState> {
   void removeTab(String tabId) {
     final updatedTabs = state.tabs.where((tab) => tab.id != tabId).toList();
     String? newActiveTabId = state.activeTabId;
-    
+
     if (state.activeTabId == tabId && updatedTabs.isNotEmpty) {
       newActiveTabId = updatedTabs.last.id;
     } else if (updatedTabs.isEmpty) {

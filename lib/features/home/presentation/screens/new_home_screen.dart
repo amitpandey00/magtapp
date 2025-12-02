@@ -7,8 +7,12 @@ import '../../../../core/models/app_feature.dart';
 import '../../../browser/presentation/screens/browser_screen.dart';
 import '../../../browser/presentation/providers/browser_state.dart';
 import '../../../../core/models/browser_tab.dart';
+
 import '../../data/services/news_service.dart';
 import '../../data/services/stock_service.dart';
+import '../../../language/presentation/providers/language_provider.dart';
+import '../../../translator/data/services/gemini_translation_service.dart';
+import '../../../../core/models/language.dart';
 
 class NewHomeScreen extends ConsumerStatefulWidget {
   const NewHomeScreen({super.key});
@@ -25,10 +29,13 @@ class _NewHomeScreenState extends ConsumerState<NewHomeScreen> with SingleTicker
 
   final NewsService _newsService = NewsService();
   final StockService _stockService = StockService();
+  final GeminiTranslationService _translationService = GeminiTranslationService();
 
   List<StockTicker> _stocks = [];
   Map<String, List<NewsArticle>> _newsCache = {};
+  Map<String, List<NewsArticle>> _translatedNewsCache = {};
   bool _isLoadingStocks = true;
+  Language? _currentLanguage;
 
   @override
   void initState() {
@@ -42,7 +49,7 @@ class _NewHomeScreenState extends ConsumerState<NewHomeScreen> with SingleTicker
 
   void _startAutoScroll() {
     _scrollTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (_stockScrollController.hasClients) {
+      if (_stockScrollController.hasClients && _stockScrollController.position.hasContentDimensions) {
         final maxScroll = _stockScrollController.position.maxScrollExtent;
         final currentScroll = _stockScrollController.offset;
 
@@ -65,6 +72,27 @@ class _NewHomeScreenState extends ConsumerState<NewHomeScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    // Listen to language changes
+    ref.listen<LanguageState>(languageProvider, (previous, next) {
+      if (previous?.selectedLanguage != next.selectedLanguage) {
+        setState(() {
+          _currentLanguage = next.selectedLanguage;
+        });
+        if (next.selectedLanguage != null) {
+          _translateAllCategories(next.selectedLanguage!);
+        }
+      }
+    });
+
+    // Initialize language from provider if not set
+    final selectedLanguage = ref.watch(languageProvider).selectedLanguage;
+    if (_currentLanguage != selectedLanguage) {
+      _currentLanguage = selectedLanguage;
+      if (_currentLanguage != null) {
+        _translateAllCategories(_currentLanguage!);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
@@ -222,14 +250,76 @@ class _NewHomeScreenState extends ConsumerState<NewHomeScreen> with SingleTicker
         setState(() {
           _newsCache[category] = news;
         });
+
+        if (_currentLanguage != null) {
+          _translateNewsForCategory(category, _currentLanguage!);
+        }
       }
     } catch (e) {
       // Error handled by service with mock data
     }
   }
 
-  Widget _buildNewsFeed(String category) {
+  Future<void> _translateAllCategories(Language targetLanguage) async {
+    for (final category in _categories) {
+      if (_newsCache.containsKey(category)) {
+        _translateNewsForCategory(category, targetLanguage);
+      }
+    }
+  }
+
+  Future<void> _translateNewsForCategory(String category, Language targetLanguage) async {
     final news = _newsCache[category];
+    if (news == null || news.isEmpty) return;
+
+    final key = '${category}_${targetLanguage.code}';
+    // If we already have translations for this language and category, don't re-translate
+    // unless the news count differs (simple cache invalidation)
+    if (_translatedNewsCache.containsKey(key) && _translatedNewsCache[key]!.length == news.length) {
+      return;
+    }
+
+    final titles = news.map((a) => a.title).toList();
+    // Assuming source is English for now
+    final sourceLang = const Language(code: 'en', name: 'English', nativeName: 'English', category: 'international', colorHex: '#000000');
+
+    try {
+      // Show loading or just update when ready?
+      // For now, we'll just update when ready. The UI will show English until then.
+
+      final translations = await _translationService.translateBatch(titles, sourceLang, targetLanguage);
+
+      final translatedArticles = <NewsArticle>[];
+      for (int i = 0; i < news.length; i++) {
+        if (i < translations.length) {
+          final original = news[i];
+          final translatedTitle = translations[i].translatedText;
+
+          translatedArticles.add(NewsArticle(id: original.id, title: translatedTitle, description: original.description, imageUrl: original.imageUrl, source: original.source, sourceIcon: original.sourceIcon, publishedAt: original.publishedAt, url: original.url, category: original.category));
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _translatedNewsCache[key] = translatedArticles;
+        });
+      }
+    } catch (e) {
+      debugPrint('Translation failed for $category: $e');
+    }
+  }
+
+  Widget _buildNewsFeed(String category) {
+    List<NewsArticle>? news;
+
+    if (_currentLanguage != null) {
+      final key = '${category}_${_currentLanguage!.code}';
+      news = _translatedNewsCache[key];
+      // Fallback to English if translation not ready yet
+      news ??= _newsCache[category];
+    } else {
+      news = _newsCache[category];
+    }
 
     if (news == null) {
       return const Center(child: CircularProgressIndicator());
@@ -254,7 +344,7 @@ class _NewHomeScreenState extends ConsumerState<NewHomeScreen> with SingleTicker
         padding: const EdgeInsets.all(16),
         itemCount: news.length,
         itemBuilder: (context, index) {
-          final article = news[index];
+          final article = news![index];
           return _buildNewsCard(article);
         },
       ),
@@ -405,24 +495,72 @@ class _NewHomeScreenState extends ConsumerState<NewHomeScreen> with SingleTicker
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
+    return GestureDetector(
+      onTap: () => _showSearchDialog(),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
+        ),
+        child: Row(
+          children: [
+            Image.network('https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png', height: 24, errorBuilder: (context, error, stackTrace) => const Icon(Icons.search, color: Colors.blue)),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Enter Website or URL', style: TextStyle(color: Colors.grey)),
+            ),
+            IconButton(icon: const Icon(Icons.qr_code_scanner), onPressed: () {}),
+            IconButton(icon: const Icon(Icons.mic), onPressed: () {}),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          Image.network('https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png', height: 24, errorBuilder: (context, error, stackTrace) => const Icon(Icons.search, color: Colors.blue)),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text('Enter Website or URL', style: TextStyle(color: Colors.grey)),
+    );
+  }
+
+  void _showSearchDialog() {
+    final searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Search or Enter URL'),
+        content: TextField(
+          controller: searchController,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Enter website or search query', border: OutlineInputBorder()),
+          onSubmitted: (value) {
+            Navigator.pop(context);
+            _performSearch(value);
+          },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _performSearch(searchController.text);
+            },
+            child: const Text('Go'),
           ),
-          IconButton(icon: const Icon(Icons.qr_code_scanner), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.mic), onPressed: () {}),
         ],
       ),
     );
+  }
+
+  void _performSearch(String query) {
+    if (query.trim().isEmpty) return;
+
+    String url;
+    if (query.startsWith('http://') || query.startsWith('https://')) {
+      url = query;
+    } else if (query.contains('.') && !query.contains(' ')) {
+      url = 'https://$query';
+    } else {
+      url = 'https://www.google.com/search?q=${Uri.encodeComponent(query)}';
+    }
+
+    _openUrl(url);
   }
 
   void _openUrl(String url) {

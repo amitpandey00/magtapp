@@ -2,32 +2,31 @@
 abstract class Failure {
   final String message;
   const Failure(this.message);
-  
+
   @override
   String toString() => message;
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure([String message = 'Server error occurred']) : super(message);
+  const ServerFailure([super.message = 'Server error occurred']);
 }
 
 class CacheFailure extends Failure {
-  const CacheFailure([String message = 'Cache error occurred']) : super(message);
+  const CacheFailure([super.message = 'Cache error occurred']);
 }
 
 class NetworkFailure extends Failure {
-  const NetworkFailure([String message = 'Network error occurred']) : super(message);
+  const NetworkFailure([super.message = 'Network error occurred']);
 }
 
 class FileFailure extends Failure {
-  const FileFailure([String message = 'File operation failed']) : super(message);
+  const FileFailure([super.message = 'File operation failed']);
 }
 
 class ParsingFailure extends Failure {
-  const ParsingFailure([String message = 'Parsing failed']) : super(message);
+  const ParsingFailure([super.message = 'Parsing failed']);
 }
 
 class UnknownFailure extends Failure {
-  const UnknownFailure([String message = 'Unknown error occurred']) : super(message);
+  const UnknownFailure([super.message = 'Unknown error occurred']);
 }
-

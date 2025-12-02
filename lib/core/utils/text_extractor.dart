@@ -5,16 +5,16 @@ class TextExtractor {
     // Remove script and style tags
     String cleaned = html.replaceAll(RegExp(r'<script[^>]*>[\s\S]*?</script>'), '');
     cleaned = cleaned.replaceAll(RegExp(r'<style[^>]*>[\s\S]*?</style>'), '');
-    
+
     // Remove HTML tags
     cleaned = cleaned.replaceAll(RegExp(r'<[^>]+>'), ' ');
-    
+
     // Decode HTML entities
     cleaned = _decodeHtmlEntities(cleaned);
-    
+
     // Clean up whitespace
     cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
+
     return cleaned;
   }
 
@@ -33,7 +33,10 @@ class TextExtractor {
   /// Get word count from text
   static int getWordCount(String text) {
     if (text.isEmpty) return 0;
-    return text.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
+    return text
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .length;
   }
 
   /// Truncate text to specified length

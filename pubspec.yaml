@@ -40,6 +40,9 @@ dependencies:
   dio: ^5.4.0
   http: ^1.1.0
   html: ^0.15.4
+  
+  # AI Services - Using Gemini for both summarization and translation
+  google_generative_ai: ^0.4.7
 
   # Browser
   flutter_inappwebview: ^6.0.0

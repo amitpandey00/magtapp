@@ -1,9 +1,10 @@
 /// Custom Exceptions for MagTapp
+library;
 
 class ServerException implements Exception {
   final String message;
   ServerException([this.message = 'Server error occurred']);
-  
+
   @override
   String toString() => 'ServerException: $message';
 }
@@ -11,7 +12,7 @@ class ServerException implements Exception {
 class CacheException implements Exception {
   final String message;
   CacheException([this.message = 'Cache error occurred']);
-  
+
   @override
   String toString() => 'CacheException: $message';
 }
@@ -19,7 +20,7 @@ class CacheException implements Exception {
 class NetworkException implements Exception {
   final String message;
   NetworkException([this.message = 'Network error occurred']);
-  
+
   @override
   String toString() => 'NetworkException: $message';
 }
@@ -27,7 +28,7 @@ class NetworkException implements Exception {
 class FileException implements Exception {
   final String message;
   FileException([this.message = 'File operation error occurred']);
-  
+
   @override
   String toString() => 'FileException: $message';
 }
@@ -35,8 +36,7 @@ class FileException implements Exception {
 class ParsingException implements Exception {
   final String message;
   ParsingException([this.message = 'Parsing error occurred']);
-  
+
   @override
   String toString() => 'ParsingException: $message';
 }
-

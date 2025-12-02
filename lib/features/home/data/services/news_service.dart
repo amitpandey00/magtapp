@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../../core/models/news_article.dart';
+import '../../../../core/utils/logger.dart';
 
 /// Service for fetching news articles
 class NewsService {
@@ -35,7 +36,7 @@ class NewsService {
 
       return _getMockNews(category);
     } catch (e) {
-      print('Error fetching news: $e');
+      Logger.error('Error fetching news', tag: 'NewsService', error: e);
       return _getMockNews(category);
     }
   }
@@ -65,6 +66,9 @@ class NewsService {
     // Generate category-specific titles
     final titles = _getCategorySpecificTitles(category);
 
+    // Real news website URLs based on category
+    final urls = _getCategorySpecificUrls(categoryLower);
+
     return List.generate(5, (index) {
       return NewsArticle(
         id: '$categoryLower-${index + 1}',
@@ -74,7 +78,7 @@ class NewsService {
         source: ['TOI', 'NDTV', 'India Today', 'The Hindu', 'BBC'][index],
         sourceIcon: ['https://logo.clearbit.com/timesofindia.com', 'https://logo.clearbit.com/ndtv.com', 'https://logo.clearbit.com/indiatoday.in', 'https://logo.clearbit.com/thehindu.com', 'https://logo.clearbit.com/bbc.com'][index],
         publishedAt: now.subtract(Duration(hours: index + 1)),
-        url: 'https://example.com/$categoryLower/${index + 1}',
+        url: urls[index],
         category: categoryLower,
       );
     });
@@ -93,6 +97,22 @@ class NewsService {
         return ['Budget 2024: Tax Reforms and Infrastructure Spending Announced', 'Rupee Strengthens Against Dollar, Reaches 82.50', 'Gold Prices Surge to Record High Amid Global Uncertainty', 'Stock Market Analysis: Top Performing Sectors This Quarter', 'Mutual Funds See Record Inflows of ₹50,000 Crore'];
       default:
         return ['Breaking: Major Development in ${category.toUpperCase()}', 'Latest Update: Important News in $category', 'Exclusive: New Developments in $category Today', 'Analysis: What This Means for $category', 'Report: Comprehensive Coverage of $category Events'];
+    }
+  }
+
+  /// Generate category-specific URLs from real news websites
+  List<String> _getCategorySpecificUrls(String category) {
+    switch (category.toLowerCase()) {
+      case 'headlines':
+        return ['https://timesofindia.indiatimes.com/', 'https://www.ndtv.com/', 'https://www.indiatoday.in/', 'https://www.thehindu.com/', 'https://www.bbc.com/news/world/asia/india'];
+      case 'sports':
+        return ['https://timesofindia.indiatimes.com/sports', 'https://sports.ndtv.com/', 'https://www.indiatoday.in/sports', 'https://www.thehindu.com/sport/', 'https://www.bbc.com/sport'];
+      case 'business':
+        return ['https://timesofindia.indiatimes.com/business', 'https://www.ndtv.com/business', 'https://www.indiatoday.in/business', 'https://www.thehindu.com/business/', 'https://www.bbc.com/news/business'];
+      case 'finance':
+        return ['https://economictimes.indiatimes.com/', 'https://www.ndtv.com/business', 'https://www.indiatoday.in/business', 'https://www.thehindu.com/business/', 'https://www.bbc.com/news/business'];
+      default:
+        return ['https://timesofindia.indiatimes.com/', 'https://www.ndtv.com/', 'https://www.indiatoday.in/', 'https://www.thehindu.com/', 'https://www.bbc.com/news'];
     }
   }
 }
